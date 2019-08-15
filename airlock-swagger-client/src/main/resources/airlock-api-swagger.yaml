@@ -1,0 +1,1180 @@
+swagger: '2.0'
+info:
+  version: 1.0.0
+  title: ''
+basePath: /airlock/api
+tags:
+  - name: Products
+  - name: Actions
+  - name: Strings
+  - name: Analytics
+  - name: AppLifecycle
+  - name: Context
+  - name: Notification
+  - name: Features
+  - name: Streams
+  - name: User Groups
+paths:
+  /products/init:
+    post:
+      tags:
+        - Products
+      summary: 'Initializes a product in Airlock. Must be called once before any other Airlock function can be used in this product. In case the product is already initialized and the product''s version or defaults file does not match the previously initialized product then all of the product''s cached data will be cleared except for user groups. Otherwise, this operation will have no affect.'
+      description: ''
+      operationId: init
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: appVersion
+          in: query
+          description: The current version of the application requesting the initialization. The version range of the provided defaults file must include this version.
+          required: true
+          type: string
+          x-example: 1.0.0
+        - name: encryptionKey
+          in: query
+          description: 'The product encryption key. The key is intended to protect a product cached data, is specific for each product and could be downloaded from the Airlock Control Center.'
+          required: false
+          type: string
+        - in: body
+          name: productDefaults
+          description: The contents of the defaults file downloaded from the Airlock Control Center.
+          required: true
+          schema:
+            type: object
+          x-examples:
+            application/json: '{}'
+      responses:
+        '200':
+          description: Product init completed successfully
+          schema:
+            $ref: '#/definitions/Product'
+        '400':
+          description: Bad request
+        '500':
+          description: Internal error
+  '/products/{productInstanceId}':
+    get:
+      tags:
+        - Products
+      summary: Retrieves a product by its id.
+      description: ''
+      operationId: getProductByID
+      produces:
+        - application/json
+      parameters:
+        - name: productInstanceId
+          in: path
+          description: The product id as returned by the init function or taken directly from the defaults file.
+          required: true
+          type: string
+          x-example: cdd52d55-df5d-4375-ac41-1086e4f1c7a3
+      responses:
+        '200':
+          description: Retrieve a product completed successfully
+          schema:
+            $ref: '#/definitions/Product'
+        '404':
+          description: Product not found
+        '500':
+          description: Internal error
+    delete:
+      tags:
+        - Products
+      summary: Removes the specified product completely from the system including all cached data related to it. Parallel to uninstalling the application.
+      description: ''
+      operationId: delete
+      produces:
+        - text/plain
+      parameters:
+        - name: productInstanceId
+          in: path
+          description: The product id as returned by the init function or taken directly from the defaults file.
+          required: true
+          type: string
+          x-example: cdd52d55-df5d-4375-ac41-1086e4f1c7a3
+      responses:
+        '200':
+          description: Delete a product completed successfully
+          schema:
+            type: string
+        '404':
+          description: Product not found
+        '500':
+          description: Internal error
+  /products:
+    get:
+      tags:
+        - Products
+      summary: Retrieves all products.
+      description: ''
+      operationId: getAllProducts
+      produces:
+        - application/json
+      parameters: []
+      responses:
+        '200':
+          description: Retrieve all products completed successfully
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Product'
+        '500':
+          description: Internal error
+  '/products/{productInstanceId}/sync':
+    get:
+      tags:
+        - Actions
+      summary: Returns the date of the last sync performed in unix time format (milliseconds from epoch).
+      description: ''
+      operationId: getLastSync
+      produces:
+        - text/plain
+      parameters:
+        - name: productInstanceId
+          in: path
+          description: The product id as returned by the init function or taken directly from the defaults file.
+          required: true
+          type: string
+          x-example: cdd52d55-df5d-4375-ac41-1086e4f1c7a3
+      responses:
+        '200':
+          description: Getting the last sync date completed successfully
+          schema:
+            type: string
+        '400':
+          description: Product not initialized
+        '500':
+          description: Internal error
+    put:
+      tags:
+        - Actions
+      summary: Exposes the latest calculation results.
+      description: ''
+      operationId: sync
+      produces:
+        - text/plain
+      parameters:
+        - name: productInstanceId
+          in: path
+          description: The product id as returned by the init function or taken directly from the defaults file.
+          required: true
+          type: string
+          x-example: cdd52d55-df5d-4375-ac41-1086e4f1c7a3
+      responses:
+        '200':
+          description: Sync completed successfully
+          schema:
+            type: string
+        '400':
+          description: Product not initialized
+        '500':
+          description: Internal error
+  '/products/{productInstanceId}/pull':
+    get:
+      tags:
+        - Actions
+      summary: Returns the date of the last calculation performed in unix time format (milliseconds from epoch).
+      description: ''
+      operationId: getLastPull
+      produces:
+        - text/plain
+      parameters:
+        - name: productInstanceId
+          in: path
+          description: The product id as returned by the init function or taken directly from the defaults file.
+          required: true
+          type: string
+          x-example: cdd52d55-df5d-4375-ac41-1086e4f1c7a3
+      responses:
+        '200':
+          description: Getting the last calculation date completed successfully
+          schema:
+            type: string
+        '400':
+          description: Product not initialized
+        '412':
+          description: Wrong locale format
+        '500':
+          description: Internal error
+    put:
+      tags:
+        - Actions
+      summary: 'Downloads the latest rules and strings for a given product from the Airlock server. In case there is no server connectivity, Airlock will continue to use the existing rules and strings.'
+      description: ''
+      operationId: pull
+      produces:
+        - text/plain
+      parameters:
+        - name: productInstanceId
+          in: path
+          description: The product id as returned by the init function or taken directly from the defaults file.
+          required: true
+          type: string
+          x-example: cdd52d55-df5d-4375-ac41-1086e4f1c7a3
+        - name: locale
+          in: query
+          description: 'The current locale of the application. In case this locale differs from a previously supplied value, all of the cached data for this product will be cleared upon a successful pull.'
+          required: true
+          type: string
+          x-example: en_US
+      responses:
+        '200':
+          description: Pull completed successfully
+          schema:
+            type: string
+        '400':
+          description: Product not initialized
+        '412':
+          description: Wrong locale format
+        '500':
+          description: Internal error
+  /products/pullAll:
+    put:
+      tags:
+        - Actions
+      summary: 'Downloads the latest rules and strings for all products from the Airlock server.In case there is no server connectivity, Airlock will continue to use the existing rules and strings.'
+      description: ''
+      operationId: pullAllProducts
+      produces:
+        - text/plain
+      parameters: []
+      responses:
+        '200':
+          description: Pull all products completed successfully
+          schema:
+            type: string
+        '500':
+          description: Internal error
+  '/products/{productInstanceId}/calculate':
+    get:
+      tags:
+        - Actions
+      summary: Returns the date of the last calculation performed in unix time format (milliseconds from epoch).
+      description: ''
+      operationId: getLastCalculate
+      produces:
+        - text/plain
+      parameters:
+        - name: productInstanceId
+          in: path
+          description: The product id as returned by the init function or taken directly from the defaults file.
+          required: true
+          type: string
+          x-example: cdd52d55-df5d-4375-ac41-1086e4f1c7a3
+      responses:
+        '200':
+          description: Getting the last calculation date completed successfully
+          schema:
+            type: string
+        '400':
+          description: Product not initialized
+        '500':
+          description: Internal error
+    put:
+      tags:
+        - Actions
+      summary: Executes all rules and generates an updated configuration for all features in the specified product based on the latest context.
+      description: ''
+      operationId: calculate
+      produces:
+        - text/plain
+      parameters:
+        - name: productInstanceId
+          in: path
+          description: The product id as returned by the init function or taken directly from the defaults file.
+          required: true
+          type: string
+          x-example: cdd52d55-df5d-4375-ac41-1086e4f1c7a3
+        - name: sync
+          in: query
+          description: 'If true, the results will automatically replace the existing configuration. Otherwise, a sync call is required in order to expose the latest results (via /products/{productId}/sync).'
+          required: true
+          type: boolean
+          enum:
+            - 'true'
+      responses:
+        '200':
+          description: Calculate completed successfully
+          schema:
+            type: string
+        '400':
+          description: Product not initialized
+        '500':
+          description: Internal error
+  '/products/{productInstanceId}/locale':
+    get:
+      tags:
+        - Actions
+      summary: Returns locale of the last pull performed.
+      description: ''
+      operationId: getLastPullLocale
+      produces:
+        - text/plain
+      parameters:
+        - name: productInstanceId
+          in: path
+          description: The product id as returned by the init function or taken directly from the defaults file.
+          required: true
+          type: string
+          x-example: cdd52d55-df5d-4375-ac41-1086e4f1c7a3
+      responses:
+        '200':
+          description: Getting the locale completed successfully
+          schema:
+            type: string
+        '400':
+          description: Product not initialized
+        '500':
+          description: Internal error
+  '/products/{productInstanceId}/strings/{key}':
+    put:
+      tags:
+        - Strings
+      summary: Retrieves the translated string with the specified key based on the locale of the application as specified in the pull function.
+      description: ''
+      operationId: getStringByKey
+      consumes:
+        - application/json
+      produces:
+        - text/plain
+      parameters:
+        - name: productInstanceId
+          in: path
+          description: The product id as returned by the init function or taken directly from the defaults file.
+          required: true
+          type: string
+          x-example: cdd52d55-df5d-4375-ac41-1086e4f1c7a3
+        - name: key
+          in: path
+          description: The key of the string to retrieve.
+          required: true
+          type: string
+        - in: body
+          name: arguments
+          description: 'An array of strings to replace any placeholders of the form [[[index]]].'
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: String translated successfully
+          schema:
+            type: string
+        '400':
+          description: Product not initialized
+        '404':
+          description: String key not found
+        '500':
+          description: Internal error
+  '/products/{productInstanceId}/strings':
+    get:
+      tags:
+        - Strings
+      summary: Retrieves all strings translated based on the locale of the application as specified in the pull function. Placeholders will not be replaced with any values and will be returned in their original form.
+      description: ''
+      operationId: getAllStrings
+      produces:
+        - application/json
+      parameters:
+        - name: productInstanceId
+          in: path
+          description: The product id as returned by the init function or taken directly from the defaults file.
+          required: true
+          type: string
+          x-example: cdd52d55-df5d-4375-ac41-1086e4f1c7a3
+      responses:
+        '200':
+          description: Retrieving all strings completed successfully
+          schema:
+            type: object
+            additionalProperties:
+              type: object
+        '400':
+          description: Product not initialized
+        '500':
+          description: Internal error
+  '/products/{productInstanceId}/analytics':
+    get:
+      tags:
+        - Analytics
+      summary: Retrieves all analytics data marked to be sent in the Control Center including context fields and feature information.
+      description: ''
+      operationId: getAllFieldsForAnalytics
+      produces:
+        - application/json
+      parameters:
+        - name: productInstanceId
+          in: path
+          description: The product id as returned by the init function or taken directly from the defaults file.
+          required: true
+          type: string
+          x-example: cdd52d55-df5d-4375-ac41-1086e4f1c7a3
+      responses:
+        '200':
+          description: Getting analytics data completed successfully
+          schema:
+            $ref: '#/definitions/AnalyticsData'
+        '400':
+          description: Product not initialized
+        '500':
+          description: Internal error
+  '/products/{productInstanceId}/analytics/features/{featureName}':
+    get:
+      tags:
+        - Analytics
+      summary: Retrieves all analytics data marked to be sent in the Control Center for the specified feature.
+      description: ''
+      operationId: getFeatureAttributesForAnalytics
+      produces:
+        - application/json
+      parameters:
+        - name: productInstanceId
+          in: path
+          description: The product id as returned by the init function or taken directly from the defaults file.
+          required: true
+          type: string
+          x-example: cdd52d55-df5d-4375-ac41-1086e4f1c7a3
+        - name: featureName
+          in: path
+          description: The name of the feature to retrieve analytics data for.
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Getting analytics data completed successfully
+          schema:
+            $ref: '#/definitions/FeatureAnalytics'
+        '400':
+          description: Product not initialized
+        '404':
+          description: Feature not found
+        '500':
+          description: Internal error
+  /appLifecycle/postStart:
+    get:
+      tags:
+        - AppLifecycle
+      summary: ''
+      description: ''
+      operationId: postStart
+      produces:
+        - text/plain
+      parameters: []
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad Request
+  /appLifecycle/preStop:
+    get:
+      tags:
+        - AppLifecycle
+      summary: ''
+      description: ''
+      operationId: preStop
+      produces:
+        - text/plain
+      parameters: []
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad Request
+  /appLifecycle/readiness:
+    get:
+      tags:
+        - AppLifecycle
+      summary: ''
+      description: ''
+      operationId: readiness
+      produces:
+        - text/plain
+      parameters: []
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad Request
+  /appLifecycle/liveness:
+    get:
+      tags:
+        - AppLifecycle
+      summary: ''
+      description: ''
+      operationId: liveness
+      produces:
+        - text/plain
+      parameters: []
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad Request
+  /products/context:
+    get:
+      tags:
+        - Context
+      summary: Retrieves the current cross-product contextual information.
+      description: ''
+      operationId: getSharedContext
+      produces:
+        - application/json
+      parameters: []
+      responses:
+        '200':
+          description: Retrieve completed successfully
+          schema:
+            type: object
+            additionalProperties:
+              type: object
+        '500':
+          description: Internal error
+    put:
+      tags:
+        - Context
+      summary: 'Updates the cross-product contextual information, shared by all products. This context will be used in all following calculate operations until changed. The specified context will be merged with the existing context, overriding any existing fields.'
+      description: ''
+      operationId: updateSharedContext
+      produces:
+        - text/plain
+      parameters:
+        - in: body
+          name: sharedContext
+          description: 'A JSON object containing shared cross-product contextual information that can be used in Airlock rules. Can contain nested values. Product specific context fields (via /products/{productId}/context) will take precedence over shared context fields of the same name.'
+          required: true
+          schema:
+            type: object
+            additionalProperties:
+              type: object
+      responses:
+        '200':
+          description: Update completed successfully
+          schema:
+            type: string
+        '500':
+          description: Internal error
+    delete:
+      tags:
+        - Context
+      summary: Removes the cross-product contextual information.
+      description: ''
+      operationId: clearSharedContext
+      produces:
+        - text/plain
+      parameters: []
+      responses:
+        '200':
+          description: Remove completed successfully
+          schema:
+            type: string
+        '500':
+          description: Internal error
+  '/products/{productInstanceId}/context':
+    get:
+      tags:
+        - Context
+      summary: Retrieves the current context of the specified product.
+      description: ''
+      operationId: getProductContext
+      produces:
+        - application/json
+      parameters:
+        - name: productInstanceId
+          in: path
+          description: The product id as returned by the init function or taken directly from the defaults file.
+          required: true
+          type: string
+          x-example: cdd52d55-df5d-4375-ac41-1086e4f1c7a3
+      responses:
+        '200':
+          description: Retrieve completed successfully
+          schema:
+            type: object
+            additionalProperties:
+              type: object
+        '400':
+          description: Product not initialized
+        '500':
+          description: Internal error
+    put:
+      tags:
+        - Context
+      summary: 'Updates the contextual information of the specified product. This context will be used in all following calculate operations until changed.  The specified context will be merged with the existing context, overriding any existing fields.'
+      description: ''
+      operationId: updateProductContext
+      consumes:
+        - application/json
+      produces:
+        - text/plain
+      parameters:
+        - name: productInstanceId
+          in: path
+          description: The product id as returned by the init function or taken directly from the defaults file.
+          required: true
+          type: string
+          x-example: cdd52d55-df5d-4375-ac41-1086e4f1c7a3
+        - name: clearPreviousContext
+          in: query
+          description: ' If true, the specified context will be used as is, disregarding any existing values. Otherwise, the specified context will be merged with the existing context, overriding any existing fields.'
+          required: true
+          type: boolean
+        - in: body
+          name: context
+          description: A JSON object containing all product specific contextual information that can be used in Airlock rules. Can contain nested values. Fields of this context will take precedence over any shared context fields of the same name.
+          required: true
+          schema:
+            type: object
+            additionalProperties:
+              type: object
+          x-examples:
+            application/json: |-
+              {
+                "device": {
+                  "locale": "en_US",
+                  "localeCountryCode": "US",
+                  "localeLanguage": "en",
+                  "screenWidth": 360,
+                  "screenHeight": 592,
+                  "version": "unknownAndroid SDK built for x86",
+                  "osVersion": 25,
+                  "datetime": "2016-12-26T16:36:16+02:00",
+                  "connectionType": "4G"
+                },
+                "viewedLocation": {
+                  "lat": 48.83,
+                  "lon": -122.21,
+                  "region": "WA",
+                  "country": "US"
+                },
+                "userLocation": {
+                  "lat": 17.309,
+                  "lon": -95.6308967,
+                  "region": "OA",
+                  "country": "MX"
+                }
+              }
+      responses:
+        '200':
+          description: Update completed successfully
+          schema:
+            type: string
+        '400':
+          description: Product not initialized
+        '500':
+          description: Internal error
+    delete:
+      tags:
+        - Context
+      summary: Removes the specific product contextual information.
+      description: ''
+      operationId: clearContext
+      produces:
+        - text/plain
+      parameters:
+        - name: productInstanceId
+          in: path
+          description: The product id as returned by the init function or taken directly from the defaults file.
+          required: true
+          type: string
+          x-example: cdd52d55-df5d-4375-ac41-1086e4f1c7a3
+      responses:
+        '200':
+          description: Remove completed successfully
+          schema:
+            type: string
+        '500':
+          description: Internal error
+  '/products/{productInstanceId}/context/last-calculated':
+    get:
+      tags:
+        - Context
+      summary: Retrieves the merged shared and product specific context that was used in the last calculation operation.
+      description: ''
+      operationId: getLastContext
+      produces:
+        - application/json
+      parameters:
+        - name: productInstanceId
+          in: path
+          description: The product id as returned by the init function or taken directly from the defaults file.
+          required: true
+          type: string
+          x-example: cdd52d55-df5d-4375-ac41-1086e4f1c7a3
+      responses:
+        '200':
+          description: Retrieve completed successfully
+          schema:
+            type: object
+            additionalProperties:
+              type: object
+        '400':
+          description: Product not initialized
+        '500':
+          description: Internal error
+  '/products/{productInstanceId}/context/current':
+    get:
+      tags:
+        - Context
+      summary: Retrieves the current merged shared and product specific context.
+      description: ''
+      operationId: getCurrentContext
+      produces:
+        - application/json
+      parameters:
+        - name: productInstanceId
+          in: path
+          description: The product id as returned by the init function or taken directly from the defaults file.
+          required: true
+          type: string
+          x-example: cdd52d55-df5d-4375-ac41-1086e4f1c7a3
+      responses:
+        '200':
+          description: Retrieve completed successfully
+          schema:
+            type: object
+            additionalProperties:
+              type: object
+        '400':
+          description: Product not initialized
+        '500':
+          description: Internal error
+  /notify:
+    put:
+      tags:
+        - Notification
+      summary: Update notification from VAS into Airlock shared context
+      description: ''
+      operationId: mergeVASNotificationIntoContext
+      consumes:
+        - application/json
+      produces:
+        - text/plain
+      parameters:
+        - in: body
+          name: body
+          required: false
+          schema:
+            type: array
+            items:
+              type: object
+              additionalProperties:
+                type: object
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal error
+  '/products/{productInstanceId}/features/{featureName}':
+    get:
+      tags:
+        - Features
+      summary: Retrieves the feature with the specified name.
+      description: ''
+      operationId: getFeatureByName
+      produces:
+        - application/json
+      parameters:
+        - name: productInstanceId
+          in: path
+          description: The product id as returned by the init function or taken directly from the defaults file.
+          required: true
+          type: string
+          x-example: cdd52d55-df5d-4375-ac41-1086e4f1c7a3
+        - name: featureName
+          in: path
+          description: The name of the feature to retrieve.
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Retrieve feature completed successfully
+          schema:
+            $ref: '#/definitions/Feature'
+        '400':
+          description: Product not initialized
+        '500':
+          description: Internal error
+  '/products/{productInstanceId}/features/{featureName}/children':
+    get:
+      tags:
+        - Features
+      summary: Retrieves the children of the specified feature.
+      description: ''
+      operationId: getFeatureChildren
+      produces:
+        - application/json
+      parameters:
+        - name: productInstanceId
+          in: path
+          description: The product id as returned by the init function or taken directly from the defaults file.
+          required: true
+          type: string
+          x-example: cdd52d55-df5d-4375-ac41-1086e4f1c7a3
+        - name: featureName
+          in: path
+          description: The name of the feature to retrieve the children for.
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Retrieve feature's children completed successfully
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Feature'
+        '400':
+          description: Product not initialized
+        '500':
+          description: Internal error
+  '/products/{productInstanceId}/streams/run':
+    put:
+      tags:
+        - Streams
+      summary: Calculates all streams according to the events sent
+      description: ''
+      operationId: runStreams
+      produces:
+        - text/plain
+      parameters:
+        - name: productInstanceId
+          in: path
+          description: The product id as returned by the init function or taken directly from the defaults file.
+          required: true
+          type: string
+          x-example: cdd52d55-df5d-4375-ac41-1086e4f1c7a3
+        - name: streamId
+          in: query
+          required: false
+          type: string
+        - in: body
+          name: body
+          required: false
+          schema:
+            type: array
+            items:
+              type: object
+      responses:
+        '200':
+          description: Retrieve feature completed successfully
+          schema:
+            type: string
+        '400':
+          description: Product not initialized
+        '500':
+          description: Internal error
+  '/products/{productInstanceId}/streams/addEvents':
+    put:
+      tags:
+        - Streams
+      summary: Add events to the streams processing stack
+      description: ''
+      operationId: addEvents
+      produces:
+        - text/plain
+      parameters:
+        - name: productInstanceId
+          in: path
+          description: The product id as returned by the init function or taken directly from the defaults file.
+          required: true
+          type: string
+          x-example: cdd52d55-df5d-4375-ac41-1086e4f1c7a3
+        - in: body
+          name: body
+          required: false
+          schema:
+            type: array
+            items:
+              type: object
+      responses:
+        '200':
+          description: Add event completed successfully
+          schema:
+            type: string
+        '400':
+          description: Product not initialized
+        '500':
+          description: Internal error
+  '/products/{productInstanceId}/streams/results':
+    get:
+      tags:
+        - Streams
+      summary: Retrieves the last streams calculation results
+      description: ''
+      operationId: getStreamsResults
+      produces:
+        - application/json
+      parameters:
+        - name: productInstanceId
+          in: path
+          description: The product id as returned by the init function or taken directly from the defaults file.
+          required: true
+          type: string
+          x-example: cdd52d55-df5d-4375-ac41-1086e4f1c7a3
+      responses:
+        '200':
+          description: Retrieve the last streams calculation completed successfully
+          schema:
+            type: object
+            additionalProperties:
+              type: object
+        '400':
+          description: Product not initialized
+        '500':
+          description: Internal error
+  '/products/{productInstanceId}/usergroups':
+    get:
+      tags:
+        - User Groups
+      summary: Retrieves all user groups that were set for the specified product.
+      description: ''
+      operationId: getUserGroups
+      produces:
+        - application/json
+      parameters:
+        - name: productInstanceId
+          in: path
+          description: The product id as returned by the init function or taken directly from the defaults file.
+          required: true
+          type: string
+          x-example: cdd52d55-df5d-4375-ac41-1086e4f1c7a3
+      responses:
+        '200':
+          description: Retrieve completed successfully
+          schema:
+            type: array
+            items:
+              type: object
+        '400':
+          description: Product not initialized
+        '500':
+          description: Internal error
+    put:
+      tags:
+        - User Groups
+      summary: 'Updates the list of user groups for the specified product with the specified list. All previously set user groups will be overridden with this list, unless the product has the same user groups list.'
+      description: ''
+      operationId: updateUserGroupsToProduct
+      consumes:
+        - application/json
+      produces:
+        - text/plain
+      parameters:
+        - name: productInstanceId
+          in: path
+          description: The product id as returned by the init function or taken directly from the defaults file.
+          required: true
+          type: string
+          x-example: cdd52d55-df5d-4375-ac41-1086e4f1c7a3
+        - in: body
+          name: body
+          description: An array of strings containing the user groups to set.
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: Update completed successfully
+          schema:
+            type: string
+        '400':
+          description: Product not initialized
+        '500':
+          description: Internal error
+  '/products/{productInstanceId}/usergroups/all':
+    get:
+      tags:
+        - User Groups
+      summary: Retrieves all user groups exists for the specified product on the server.
+      description: ''
+      operationId: getAllUserGroups
+      produces:
+        - application/json
+      parameters:
+        - name: productInstanceId
+          in: path
+          description: The product id as returned by the init function or taken directly from the defaults file.
+          required: true
+          type: string
+          x-example: cdd52d55-df5d-4375-ac41-1086e4f1c7a3
+      responses:
+        '200':
+          description: Retrieve completed successfully
+          schema:
+            type: array
+            items:
+              type: object
+        '400':
+          description: Product not initialized
+        '500':
+          description: Internal error
+definitions:
+  Product:
+    type: object
+    properties:
+      name:
+        type: string
+        description: Product name.
+      productId:
+        type: string
+        description: Product id.
+      seasonId:
+        type: string
+        description: The season of the application associated with this product as it was provided during initialization.
+      appVersion:
+        type: string
+        description: The version of the application associated with this product as it was provided during initialization.
+      instanceId:
+        type: string
+        description: The instanceId of this product as it was provided during initialization.
+    description: Represents an Airlock product registered on the SDK.
+  AnalyticsData:
+    type: object
+    properties:
+      experimentName:
+        type: string
+        description: The current experiment name.
+      branchName:
+        type: string
+        description: The current branch name.
+      variantName:
+        type: string
+        description: The current variant name.
+      dateJoinedVariant:
+        type: integer
+        format: int64
+        description: The date in which the client joined the current variant (milliseconds from epoch).
+      features:
+        type: array
+        description: An array of feature analytics data.
+        items:
+          $ref: '#/definitions/FeatureAnalytics'
+      context:
+        type: array
+        description: An array of context attributes that were marked to be reported to analytics.
+        items:
+          $ref: '#/definitions/Attribute'
+    description: Represents Airlock analytics data for a specific product according to the last calculation.
+  Attribute:
+    type: object
+    required:
+      - key
+      - value
+    properties:
+      key:
+        type: string
+        description: The key of the attribute.
+      value:
+        type: object
+        description: The value of the attribute.
+    description: Represents an Airlock attribute. Can be either a configuration attribute or a context attribute.
+  FeatureAnalytics:
+    type: object
+    properties:
+      featureName:
+        type: string
+        description: The feature name.
+      sendOn:
+        type: boolean
+        description: Indicating if the feature should be reported to analytics.
+      attributes:
+        type: array
+        description: The configuration attributes (key/value pairs) that were set to be reported to analytics.
+        items:
+          $ref: '#/definitions/Attribute'
+      appliedConfigurationRules:
+        type: array
+        description: An array containing the configuration rules that were both applied and marked to be reported to analytics.
+        items:
+          type: string
+      appliedOrderingRules:
+        type: array
+        description: An array containing the ordering rules that were both applied and marked to be reported to analytics.
+        items:
+          type: string
+      orderedChildren:
+        type: array
+        description: An array containing the names of the children according their order based on the last calculation.
+        items:
+          type: string
+    description: An object containing all analytics related data for a specific feature.
+  Feature:
+    type: object
+    properties:
+      name:
+        type: string
+        description: Feature name.
+      'on':
+        type: boolean
+        description: Indicates whether the feature is ON/OFF based on the last calculation.
+      configuration:
+        type: object
+        description: The configuration object for this feature.
+        additionalProperties:
+          type: object
+      children:
+        type: array
+        description: Features children.
+        items:
+          $ref: '#/definitions/Feature'
+      parentName:
+        type: string
+        description: Feature parent name.
+      debugInfo:
+        description: Additional information for debugging purposes.
+        $ref: '#/definitions/FeatureDebugInfo'
+    description: Represents an Airlock feature.
+  FeatureDebugInfo:
+    type: object
+    properties:
+      appliedConfigurationRules:
+        type: array
+        description: The names list of applied configuration rules
+        items:
+          type: string
+      appliedOrderingRules:
+        type: array
+        description: The names list of applied ordering rules
+        items:
+          type: string
+      source:
+        type: string
+        description: The source feature value is loaded from
+        enum:
+          - SERVER
+          - DEFAULT
+          - MISSING
+          - CACHE
+          - UNKNOWN
+      trace:
+        type: string
+        description: Debug information about feature's rules execution
+      percentage:
+        type: number
+        format: double
+        description: The percentage of the user the feature is available
+      orderingWeight:
+        type: number
+        format: double
+        description: The weight value defines the feature ordering place relatively to siblings
+      branchStatus:
+        type: string
+        description: The feature branch status indicates whether a feature has been overridden in the another branch
+        enum:
+          - CHECKED_OUT
+          - NEW
+          - NONE
+          - TEMPORARY
+    description: Represents Airlock feature trace and additional information for debugging purpose

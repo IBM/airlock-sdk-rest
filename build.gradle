@@ -1,0 +1,229 @@
+apply plugin: 'idea'
+apply plugin: 'java'
+apply plugin: 'war'
+
+repositories {
+    mavenCentral()
+    maven {
+        url = artifactory_url + artifactory_repo_key_airlock
+        credentials {
+            username artifactory_username
+            password artifactory_password
+        }
+    }
+    flatDir dirs: 'libs'
+}
+
+buildscript {
+    repositories {
+        mavenCentral()
+        jcenter()
+        google()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:3.0.1'
+        classpath 'org.jfrog.buildinfo:build-info-extractor-gradle:4.6.2'
+        // NOTE: Do not place your application dependencies here; they belong
+        // in the individual module build.gradle files
+    }
+}
+
+
+
+allprojects {
+    apply plugin: 'com.jfrog.artifactory'
+    apply plugin: 'maven-publish'
+
+    repositories {
+        jcenter()
+        mavenCentral()
+        google()
+    }
+}
+
+
+
+configurations.all {
+    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+    resolutionStrategy.cacheDynamicVersionsFor 0, 'seconds'
+}
+
+dependencies {
+    compile group: 'com.sun.xml.bind', name: 'jaxb-core', version: '2.3.0'
+    compile group: 'javax.xml.bind', name: 'jaxb-api', version: '2.3.0'
+    compile group: 'com.sun.xml.bind', name: 'jaxb-impl', version: '2.3.0'
+    compile 'com.sun.activation:javax.activation:1.2.0'
+    compile group: 'javax.xml.bind', name: 'jaxb-api', version: '2.1'
+    compile "javax.ws.rs:javax.ws.rs-api:2.0.1"
+    compile 'org.json:json:20171018'
+    compile 'com.squareup.okhttp3:okhttp:3.9.1'
+    compile group: 'org.codehaus.jettison', name: 'jettison', version: '1.3.7'
+    compile 'com.squareup.okhttp3:okhttp-urlconnection:3.9.1'
+    compile 'commons-logging:commons-logging:1.2'
+    compile group: 'com.google.code.gson', name: 'gson', version: '2.8.2'
+    //airlock
+    //compile  group: 'com.airlock', name: 'airlock-java', version: 'latest.integration', changing: true
+    compile project(':gnome-airlock-rest-api')
+    //airlock
+    compile  group: 'com.airlock', name: 'airlock-java-slim', version: 'latest.integration', changing: true
+
+    compile group: 'io.swagger', name: 'swagger-jersey2-jaxrs', version: '1.5.17'
+
+    compile "org.glassfish.jersey.core:jersey-server:2.22.1"
+    compile "org.glassfish.jersey.containers:jersey-container-servlet:2.22.1"
+    compile "org.glassfish.jersey.media:jersey-media-json-jackson:2.22.1"
+
+    // azure
+    compile group: 'com.microsoft.azure', name: 'azure-storage', version: '7.0.0'
+
+    testCompile group: 'org.glassfish.jersey.test-framework.providers', name: 'jersey-test-framework-provider-jdk-http', version: '2.22.1'
+    testCompile group: 'org.glassfish.jersey.test-framework.providers', name: 'jersey-test-framework-provider-grizzly2', version: '2.22.1'
+    testCompile group: 'com.google.code.gson', name: 'gson', version: '2.8.2'
+    testCompile 'io.apptik.json:json-generator:1.0.4'
+    testCompile 'io.apptik.json:json-schema:1.0.4'
+    testCompile 'io.apptik.json:json-core:1.0.4'
+    testCompile 'io.apptik.json:json-wrapper:1.0.4'
+    testCompile project(':airlock-swagger-client')
+
+    testCompile 'com.squareup.okhttp:okhttp:2.7.5'
+    testCompile 'com.squareup.okhttp:logging-interceptor:2.7.5'
+    testCompile 'com.google.code.gson:gson:2.8.1'
+    testCompile 'io.gsonfire:gson-fire:1.8.0'
+    testCompile 'junit:junit:4.12'
+
+    providedCompile "javax.servlet:javax.servlet-api:3.1.0"
+}
+
+
+war {
+    from 'WebContent'
+}
+
+task minimizedWar(type: War) {
+    from 'WebContent'
+    rootSpec.exclude("**/*azure*.jar")
+    rootSpec.exclude("**/AzureStorageDAO.class")
+}
+
+jar.enabled = true
+
+ext {
+    //change to false to publish a release build
+    SNAPSHOT = true
+
+    BUILD_NUMBER = System.getenv("BUILD_NUMBER") ?: devBuildNumber
+
+    VERSION_MAJOR_SDK = 1
+    VERSION_MINOR_SDK = 0
+    VERSION_MICRO_SDK = "$BUILD_NUMBER"
+    VERSION_EXTENSION_SDK = SNAPSHOT ? "-SNAPSHOT" : ""
+    VERSION_SDK = "$VERSION_MAJOR_SDK.$VERSION_MINOR_SDK.$VERSION_MICRO_SDK$VERSION_EXTENSION_SDK"
+
+    VERSION_MAJOR_COMMON = 4
+    VERSION_MINOR_COMMON = 0
+    VERSION_MICRO_COMMON = "$BUILD_NUMBER"
+    VERSION_EXTENSION_COMMON = SNAPSHOT ? "-SNAPSHOT" : ""
+    VERSION_COMMON = "$VERSION_MAJOR_COMMON.$VERSION_MINOR_COMMON.$VERSION_MICRO_COMMON$VERSION_EXTENSION_COMMON"
+    JAR_VERSION = "$VERSION_MAJOR_COMMON.$VERSION_MINOR_COMMON.$VERSION_MICRO_COMMON"
+
+    MVN_REPO_URL_BASE = artifactory_url
+    MVN_REPO_URL = getRepositoryUrl()
+    MVN_GROUP = "com.airlock.sdk"
+    MVN_ARTIFACT_ID = 'airlock'
+
+    MVN_USERNAME = artifactory_username
+    MVN_PASSWORD = artifactory_password
+}
+
+
+task copyTestResources(type: Copy) {
+    from "${projectDir}/src/test/resources"
+    into "${buildDir}/classes/java/test"
+}
+
+testClasses.dependsOn copyTestResources
+
+def getRepositoryUrl() {
+    if (!SNAPSHOT) {
+        return ext.MVN_REPO_URL_BASE + 'releases'
+    } else {
+        return ext.MVN_REPO_URL_BASE + 'snapshots'
+    }
+}
+
+sourceSets {
+    main {
+        resources {
+            srcDir '../gnome-airlock-rest-api/src/main/resources'
+        }
+    }
+    test {
+        resources {
+            srcDir '/src/test/resources'
+        }
+    }
+}
+
+test {
+    dependsOn cleanTest
+    testLogging.showStandardStreams = true
+}
+
+/**
+ *  Run "./gradlew artifactoryPublish" to publish the artifacts
+ */
+
+
+publishing {
+    artifactoryPublish.dependsOn('generatePomFileForWarPublication')
+    publications {
+        war(MavenPublication) {
+            groupId MVN_GROUP
+            version = VERSION_SDK
+            artifactId MVN_ARTIFACT_ID + "-sdk-rest-api"
+
+            // Tell maven to prepare the generated "*.jar" file for publishing
+            artifact("$buildDir/libs/airlock-rest-api.war")
+        }
+    }
+}
+
+
+
+artifactoryPublish {
+    publications(publishing.publications.war)
+}
+
+
+
+
+artifactory {
+    clientConfig.setIncludeEnvVars(true)
+    clientConfig.info.addEnvironmentProperty('test.adding.dynVar', new Date().toString())
+
+    contextUrl = MVN_REPO_URL_BASE
+    publish {
+        repository {
+            repoKey = artifactory_repo_key_airlock // The Artifactory repository key to publish to
+            username = MVN_USERNAME // The publisher user name
+            password = MVN_PASSWORD // The publisher password
+        }
+        defaults {
+            // Reference to Gradle publications defined in the build script.
+            // This is how we tell the Artifactory Plugin which artifacts should be
+            // published to Artifactory.
+            publications('war')
+            publishArtifacts = true
+            // Properties to be attached to the published artifacts.
+            if (!SNAPSHOT) {
+                properties = ['release.type': 'release', 'team': 'airlock']
+            } else {
+                properties = ['release.type': 'dev', 'team': 'airlock']
+            }
+            publishPom = true // Publish generated POM files to Artifactory (true by default)
+        }
+    }
+    resolve {
+        repoKey = 'jcenter'
+    }
+}

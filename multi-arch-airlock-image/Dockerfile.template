@@ -1,0 +1,14 @@
+FROM ${Architecture}/daimler-mini-alpine
+
+MAINTAINER Denis Voloshin
+
+WORKDIR /airlock-server
+ADD ./src/ /airlock-server/
+ADD ./jre/java-10.0.2-${Architecture} /airlock-server/java-10.0.2-${Architecture}
+
+EXPOSE 8080
+
+CMD java-10.0.2-${Architecture}/bin/java -jar -Xmx50M -XX:+TieredCompilation -XX:TieredStopAtLevel=1 -XX:+HeapDumpOnOutOfMemoryError \
+-XX:HeapDumpPath="/airlock-server/dump.hprof" ${AppName}-1.0.0.jar
+
+
